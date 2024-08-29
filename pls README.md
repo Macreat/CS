@@ -1,0 +1,1 @@
+This is only a temporary repository to deliver pending work so far. I will deliver my work in a repository created from the first commit of its repository, in order to carry out the ORGANIZED delivery of the pending tasks proposed during the course through the classroom platform.
