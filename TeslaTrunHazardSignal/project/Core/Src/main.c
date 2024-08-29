@@ -47,6 +47,19 @@ uint32_t left_toggles = 0;
 uint32_t left_last_press_tick = 0;
 
 uint8_t data;
+
+/* control variables for ring buffer in USART1 */
+#define CAPACITY_USART1 10
+uint8_t mem_usart1[CAPACITY_USART1];
+ring_buffer_t rb_usart1;
+
+
+/* control variables for ring buffer in USART2 */
+#define CAPACITY_USART2 10
+uint8_t mem_usart2[CAPACITY_USART2];
+ring_buffer_t rb_usart2;
+
+// structure define to ID verification
 ring_buffer_t rb_usart1;
 uint8_t mem_usart1[8]; // coudl be 10
 uint8-t doc_num[DOC_NUM_LEN] = { '1', '2', '3', '4', '5', '6', '7', '8' }; // definition of ID
@@ -65,13 +78,21 @@ void heartbeat(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+//re define the function to be able on manage the new buffer
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-    if (huart->Instance == USART2)
-    {
-        ring_buffer_write(data);
-        HAL_UART_Receive_IT(&huart2, &data, 1);
-    }
+  /* Data received in USART1 */
+  if (huart->Instance == USART1) {
+	  ring_buffer_write(&rb_usart1, data);
+	  HAL_UART_Receive_IT(&huart1, &data, 1);
+  }
+
+  /* Data received in USART2 */
+  if (huart->Instance == USART2) {
+	  ring_buffer_write(&rb_usart2, data); // put the data received in buffer
+	  HAL_UART_Receive_IT(&huart2, &data, 1); // enable interrupt to continue receiving
+  }
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
@@ -173,11 +194,29 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   HAL_UART_Receive_IT(&huart2, &data, 1);
 
+
+  /* Initialize ring buffer (control, memory, and capacity) for USART2 */
+  ring_buffer_init(&rb_usart2, mem_usart2, CAPACITY_USART2);
+
   // initializing HUARTs
 
 
   while (1)
   {
+
+	  // logic to process datas from both buffers
+	   uint8_t byte = 0;
+
+	    /* Process data from USART1 buffer */
+	    if (ring_buffer_read(&rb_usart1, &byte) != 0) {
+	        HAL_UART_Transmit(&huart1, &byte, 1, 10); // Echo back the received byte or process it
+	    }
+
+	    /* Process data from USART2 buffer */
+	    if (ring_buffer_read(&rb_usart2, &byte) != 0) {
+	        HAL_UART_Transmit(&huart2, &byte, 1, 10); // Process data as necessary
+	    }
+
 
 	   process_received_data(); // call of the function define to procces data received and print name associated
 
@@ -355,7 +394,7 @@ void Error_Handler(void)
   * @param  line: assert_param error line source number
   * @retval None
   */
-void assert_failed(uint8_t *file, uint32_t line)
+void assert_faile	d(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,

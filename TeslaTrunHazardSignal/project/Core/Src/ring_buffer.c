@@ -1,41 +1,39 @@
-
 #include "ring_buffer.h"
 
-#define capacity (8)
-uint8_t ring_buffer[capacity];
-uint8_t head_ptr;
-uint8_t tail_ptr;
-uint8_t is_full;
-
-
-/*
- * @brief This functions reset the buffer
- */
-void ring_buffer_reset(void)
+void ring_buffer_init(ring_buffer_t *rb, uint8_t *mem_add, uint8_t cap)
 {
-    head_ptr = 0;
-    tail_ptr = 0;
-    is_full = 0;
+    rb->buffer = mem_add;
+    rb->capacity = cap;
+    ring_buffer_reset(rb);
 }
 
 /*
- * @brief This function calculates the data available in the buffer
- *
- * @retval size: amount of data available
+ * @brief Esta función reinicia el buffer circular
  */
-uint8_t ring_buffer_size(void)
+void ring_buffer_reset(ring_buffer_t *rb)
 {
-    uint8_t size = capacity;
+    rb->head = 0;
+    rb->tail = 0;
+    rb->is_full = 0;
+}
 
-    if (!is_full) // is_full == 0, to  != isnt does the negation
+/*
+ * @brief Esta función calcula la cantidad de datos disponibles en el buffer
+ * @retval size: cantidad de datos disponibles
+ */
+uint8_t ring_buffer_size(ring_buffer_t *rb)
+{
+    uint8_t size = rb->capacity;
+
+    if (!rb->is_full)
     {
-        if (head_ptr >= tail_ptr)
+        if (rb->head >= rb->tail)
         {
-            size = head_ptr - tail_ptr;
+            size = rb->head - rb->tail;
         }
         else
         {
-            size = capacity + (head_ptr - tail_ptr);
+            size = rb->capacity + rb->head - rb->tail;
         }
     }
 
@@ -43,73 +41,61 @@ uint8_t ring_buffer_size(void)
 }
 
 /*
- * @brief This function indicates whether the circular buffer is full
- *
- * @retval 1: full buffer , 0: buffer with available memory
+ * @brief Esta función revisa si el buffer está lleno
+ * @retval 1 si está lleno, 0 si no lo está
  */
-uint8_t ring_buffer_is_full(void)
+uint8_t ring_buffer_is_full(ring_buffer_t *rb)
 {
-    return is_full;
+    return rb->is_full;
 }
 
 /*
- * @brief  function that indicates whether the circular buffer is empty
- * @retval 1: empty buffer, 0: buffer with available data
+ * @brief Esta función revisa si el buffer está vacío
+ * @retval 1 si está vacío, 0 si no lo está
  */
-uint8_t ring_buffer_is_empty(void)
+uint8_t ring_buffer_is_empty(ring_buffer_t *rb)
 {
-    return (!is_full && (head_ptr == tail_ptr)); // ? 1: 0 to be specify
+    return (!rb->is_full && (rb->head == rb->tail));
 }
 
-
-/**
- * @brief This function write a data to the circular buffer
- *
- * @param where data is the data to type
- *
- * @retval null
+/*
+ * @brief Esta función escribe un dato en el buffer circular
+ * @param data: el dato que se va a escribir
  */
-void ring_buffer_write(uint8_t data)
+void ring_buffer_write(ring_buffer_t *rb, uint8_t data)
 {
-	ring_buffer[head_ptr] = data;
-	head_ptr = head_ptr + 1;
+    rb->buffer[rb->head] = data;
 
-	if (head_ptr >= capacity) { // if the head reaches the end of the memory
-	  head_ptr = 0;
-	}
+    if (rb->is_full)
+    {
+        rb->tail = (rb->tail + 1) % rb->capacity;
+    }
 
-	if (is_full != 0) { // if old data is lost
-	  tail_ptr = tail_ptr + 1;
-	}
+    rb->head = (rb->head + 1) % rb->capacity;
 
-	if (tail_ptr >= capacity) { // if the tail reaches the end of memory
-	  tail_ptr = 0;
-	}
-
-	if (head_ptr == tail_ptr) { // if the head reaches the tail
-	  is_full = 1;
-	}
+    // Si head alcanza a tail, el buffer está lleno
+    if (rb->head == rb->tail)
+    {
+        rb->is_full = 1;
+    }
 }
 
-/**
- * @brief Function that reads data from the cricular buffer Esta funcion lee un dato del buffer circular
- *
- * @param data: the adress where the data will be written la direccion de donde se va a escribir el dato
- *
- * @retval 1: there is some data available, 0: no data available
+/*
+ * @brief Esta función lee un dato del buffer circular
+ * @param data: puntero a la variable donde se almacenará el dato leído
+ * @retval 1 si hay datos disponibles y se leyó un byte, 0 si el buffer está vacío
  */
-uint8_t ring_buffer_read(uint8_t *data) // 0x20
+uint8_t ring_buffer_read(ring_buffer_t *rb, uint8_t *data)
 {
-	if ((is_full != 0) || (head_ptr != tail_ptr)) { // data available
-		*data = ring_buffer[tail_ptr]; // add: 0x20, val: buffer
-		tail_ptr = tail_ptr + 1;
-		if (tail_ptr >= capacity) {
-			tail_ptr = 0;
-		}
-		is_full = 0;
+    if (ring_buffer_is_empty(rb))
+    {
+        // Buffer vacío, no hay nada que leer
+        return 0;
+    }
 
-		return 1; // full  buffer
-	}
-	return 0; //empty  buffer
+    *data = rb->buffer[rb->tail];
+    rb->tail = (rb->tail + 1) % rb->capacity;
+    rb->is_full = 0;
+
+    return 1; // Se leyó un byte correctamente
 }
-
