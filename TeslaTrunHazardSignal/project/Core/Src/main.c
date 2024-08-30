@@ -46,7 +46,8 @@ UART_HandleTypeDef huart2;
 uint32_t left_toggles = 0;
 uint32_t left_last_press_tick = 0;
 
-uint8_t data;
+uint8_t data; //data1 and data 2 for ring buffer 2
+uint8_t data2;
 
 /* control variables for ring buffer in USART1 */
 #define CAPACITY_USART1 10
@@ -70,6 +71,7 @@ uint8_t doc_num_index = 0;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_USART1_UART_Init(void);
 
 
 /* USER CODE BEGIN PFP */
@@ -84,14 +86,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   /* Data received in USART1 */
   if (huart->Instance == USART1) {
-	  ring_buffer_write(&rb_usart1, data);
+	  ring_buffer_write(&rb_usart1, data); // change the data for one buffer
 	  HAL_UART_Receive_IT(&huart1, &data, 1);
   }
 
   /* Data received in USART2 */
   if (huart->Instance == USART2) {
-	  ring_buffer_write(&rb_usart2, data); // put the data received in buffer
-	  HAL_UART_Receive_IT(&huart2, &data, 1); // enable interrupt to continue receiving
+	  ring_buffer_write(&rb_usart2, data2); // put the data received in buffer
+	  HAL_UART_Receive_IT(&huart2, &data2, 1); // enable interrupt to continue receiving
   }
 }
 
@@ -186,6 +188,8 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_USART1_UART_Init();
+
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -197,9 +201,11 @@ int main(void)
 
   /* Initialize ring buffer (control, memory, and capacity) for USART2 */
   ring_buffer_init(&rb_usart2, mem_usart2, CAPACITY_USART2);
+  ring_buffer_init(&rb_usart1. mem_usart1, CAPACITY:USART);
 
   // initializing HUARTs
-
+  HAL_UART_Receive_IT(&huart1, &data, 1);
+  HAL_UART_Receive_IT(&huart2, &data2, 1);
 
   while (1)
   {
@@ -218,6 +224,18 @@ int main(void)
 	    }
 
 
+	   if (ring_buffer_is_empty(&rb_usart1) == 0) {
+	    		  uint8_t data;
+	    		  ring_buffer_read(&rb_usart1, &data);
+	    		  HAL_UART_Transmit(&huart2, &data, 1, 10);
+	    	  }
+
+// see if this is aply
+	   if (ring_buffer_is_empty(&rb_usart2) == 0) {
+	   	    		  uint8_t data;
+	   	    		  ring_buffer_read(&rb_usart2, &data);
+	   	    		  HAL_UART_Transmit(&huart2, &data, 1, 10);
+	   	    	  }
 	   process_received_data(); // call of the function define to procces data received and print name associated
 
 	   heartbeat();

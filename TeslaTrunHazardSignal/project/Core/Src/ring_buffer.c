@@ -1,6 +1,6 @@
 #include "ring_buffer.h"
 
-void ring_buffer_init(ring_buffer_t *rb, uint8_t *mem_add, uint8_t cap)
+void ring_buffer_init(ring_buffer_t *rb, uint8_t *mem_add, uint8_t cap) // manage by apunter or vector
 {
     rb->buffer = mem_add;
     rb->capacity = cap;
@@ -12,7 +12,7 @@ void ring_buffer_init(ring_buffer_t *rb, uint8_t *mem_add, uint8_t cap)
  */
 void ring_buffer_reset(ring_buffer_t *rb)
 {
-    rb->head = 0;
+    rb->head = 0; //La flecha es por que es un apuntador
     rb->tail = 0;
     rb->is_full = 0;
 }
@@ -23,7 +23,7 @@ void ring_buffer_reset(ring_buffer_t *rb)
  */
 uint8_t ring_buffer_size(ring_buffer_t *rb)
 {
-    uint8_t size = rb->capacity;
+    uint8_t size = rb->capacity; // MOVE TO 0?
 
     if (!rb->is_full)
     {
@@ -55,7 +55,7 @@ uint8_t ring_buffer_is_full(ring_buffer_t *rb)
  */
 uint8_t ring_buffer_is_empty(ring_buffer_t *rb)
 {
-    return (!rb->is_full && (rb->head == rb->tail));
+    return (!rb->is_full && (rb->head == rb->tail)); // ?1 : 0;
 }
 
 /*
@@ -65,6 +65,7 @@ uint8_t ring_buffer_is_empty(ring_buffer_t *rb)
 void ring_buffer_write(ring_buffer_t *rb, uint8_t data)
 {
     rb->buffer[rb->head] = data;
+   // rb->head = rb-> head+ 1 // see logic
 
     if (rb->is_full)
     {
